@@ -8,5 +8,8 @@ license = "MIT"
 [dependencies]
 tokio-timer = "0.2.10"
 futures = "0.1.19"
-tokio = "0.1.7"
+tokio = "0.1.19"
 either = "1.5.2"
+
+[dev-dependencies]
+pretty_assertions = "0.4.0"
