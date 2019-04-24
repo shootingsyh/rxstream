@@ -90,7 +90,7 @@ impl<S1, S2> Stream for CombineLatest<S1, S2>
                     self.queued2.clone().unwrap()
                 );
                 Ok(Async::Ready(Some(pair)))
-        } else if self.s1.is_done() || self.s2.is_done() {
+        } else if self.s1.is_done() && self.s2.is_done() {
             Ok(Async::Ready(None))
         } else {
             Ok(Async::NotReady)

@@ -1,9 +1,10 @@
 use futures::Stream;
-mod combination;
-pub use combination::pairwise::Pairwise;
-pub use combination::combine_latest::CombineLatest;
+mod join_creation;
+mod transform;
+pub use transform::pairwise::Pairwise;
+pub use join_creation::combine_latest::CombineLatest;
 
-pub use combination::combine_latest::combine_latest;
+pub use join_creation::combine_latest::combine_latest;
 
 impl<T> RxStreamEx for T where T: Stream {}
 

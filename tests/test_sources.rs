@@ -1,8 +1,7 @@
 use rxstream::source;
 use tokio::prelude::*;
-
 use tokio::runtime::current_thread::Runtime;
-
+mod common;
 
 #[test]
 fn of_generates_list() {
@@ -12,8 +11,8 @@ fn of_generates_list() {
 }
 #[test]
 fn timer_generates_list() {
-    // need tokio run time for timer
     let mut runtime = Runtime::new().unwrap();
+    // need tokio run time for timer
     let t = source::interval(10)
         .take(3)
         .collect();
