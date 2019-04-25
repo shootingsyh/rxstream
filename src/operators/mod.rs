@@ -7,6 +7,8 @@ pub use join_creation::combine_latest::CombineLatest;
 
 // static operators
 pub use join_creation::combine_latest::combine_latest;
+
+/// merge is alias of select operator in rust
 pub fn merge<S1: Stream, S2: Stream<Item=S1::Item, Error=S1::Error>>(s1: S1, s2: S2) -> Select<S1, S2> {
     s1.select(s2)
 }
