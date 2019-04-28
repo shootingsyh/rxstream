@@ -18,3 +18,5 @@ pub fn interval(millis: u64) -> impl Stream<Item = u64, Error = tokio::timer::Er
 pub fn of<T: Iterator>(iter: T) -> impl Stream<Item = T::Item, Error = ()> {
     futures::stream::iter_ok(iter)
 }
+
+pub use futures::stream::empty;
