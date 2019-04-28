@@ -92,6 +92,98 @@ impl<S1, S2> Stream for CombineLatest<S1, S2>
                 Ok(Async::Ready(Some(pair)))
         } else if self.s1.is_done() && self.s2.is_done() {
             Ok(Async::Ready(None))
+        } else if self.s1.is_done() && self.queued1.is_none() ||
+            self.s2.is_done() && self.queued2.is_none() 
+        {
+            Ok(Async::Ready(None))
+        } else {
+            Ok(Async::NotReady)
+        }
+    }
+}
+
+#[derive(Debug)]
+#[must_use = "streams do nothing unless polled"]
+pub struct CombineLatestVec<S: Stream> 
+    where S::Item: Clone, 
+{
+    s_list: Vec<Fuse<S>>,
+    queued_list: Vec<Option<S::Item>>,
+}
+
+pub fn combine_latest_vec<S>(s: Vec<S>) -> 
+    impl Stream<Item=Vec<S::Item>, Error=S::Error> 
+    where 
+    S: Stream, 
+    S::Item: Clone, 
+{
+    CombineLatestVec::new(s)
+}
+
+impl<S> CombineLatestVec<S> 
+    where 
+        S: Stream, 
+        S::Item: Clone,   
+{
+    pub fn new(streams: Vec<S>) -> CombineLatestVec<S>
+        where 
+            S: Stream, 
+            S::Item: Clone, 
+    {
+        let len = streams.len();
+        CombineLatestVec {
+            s_list: streams.into_iter().map(|s| s.fuse()).collect(),
+            queued_list: vec![None; len],
+        }
+    }
+}
+
+impl<S> Stream for CombineLatestVec<S>
+    where 
+        S: Stream, 
+        S::Item: Clone,  
+{
+    type Item = (Vec<S::Item>);
+    type Error = S::Error;
+
+    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+        let mut done_count = 0;
+        let len = self.s_list.len();
+        for (i, s) in self.s_list.iter_mut().enumerate() {
+            let has_new = match s.poll() {
+                Ok(Async::Ready(Some(item1))) => {
+                    self.queued_list[i] = Some(item1);
+                    true
+                }
+                Ok(Async::Ready(None)) => {
+                    done_count+= 1; 
+                    if !self.queued_list[i].is_some() {
+                        // if some stream end but has not yield any value, the entier result done
+                        return Ok(Async::Ready(None))
+                    }
+                    false
+                },
+                Ok(Async::NotReady) => false,
+                Err(e) => return Err(e)
+            };
+            // If anyone ready
+            if has_new {
+                let mut r = Vec::with_capacity(self.s_list.len());
+                for q in &self.queued_list {
+                    if q.is_some() {
+                        r.push(q.clone().unwrap());
+                    } else {
+                        // If any queued item is not filled, the stream is not ready
+                        return Ok(Async::NotReady);
+                    }
+                }
+                return Ok(Async::Ready(Some(r)))
+            }
+        }
+        // Not a single has_new
+        if done_count == len {
+            // everyone is done 
+            Ok(Async::Ready(None))
         } else {
             Ok(Async::NotReady)
         }

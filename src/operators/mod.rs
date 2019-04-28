@@ -1,16 +1,40 @@
 use futures::Stream;
 extern crate either;
+pub use either::{Either, Left, Right};
 pub use futures::stream;
-pub use futures::stream::{Select, Chain, Once};
-pub use futures::future;
-pub use futures::future::Join;
+pub use futures::stream::{Select, Chain, Once, Collect};
+pub use futures::Future;
+pub use futures::future::{Join, FlattenStream};
 mod combination;
 mod transform;
 pub use transform::pairwise::Pairwise;
 pub use combination::combine_latest::CombineLatest;
+pub use combination::combine_latest::CombineLatestVec;
 
 // static operators
+
+/// combine latest
+/// Notes:
+/// 1. If any inner stream is done without emit any value, the result stream 
+///    will end immediately. 
+/// 2. As long as all inner stream emitted some value, the result stream
+///    will end when all inner streams end
+/// 3. If any inner streams didn't emit any value and didn't end, the result
+///    stream wait forever.
 pub use combination::combine_latest::combine_latest;
+pub use combination::combine_latest::combine_latest_vec;
+
+/// combine_all
+/// See warning in combine_latest as this one use same logic there. 
+pub fn combine_all<SInner: Stream, SOuter: Stream<Item=SInner>>(s: SOuter) -> 
+    impl Stream<Item=Vec<SInner::Item>, Error=Either<SInner::Error, SOuter::Error>> 
+    where SInner::Item: Clone
+{
+    s.collect()
+        .map(|streams| combine_latest_vec(streams).map_err(|e| Left(e)))
+        .map_err(|e| Right(e))
+        .flatten_stream()
+}
 
 /// merge is an alias of select operator in rust stream library. 
 /// Notes 
