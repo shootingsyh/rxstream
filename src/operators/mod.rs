@@ -4,13 +4,13 @@ pub use futures::stream;
 pub use futures::stream::{Select, Chain, Once};
 pub use futures::future;
 pub use futures::future::Join;
-mod join_creation;
+mod combination;
 mod transform;
 pub use transform::pairwise::Pairwise;
-pub use join_creation::combine_latest::CombineLatest;
+pub use combination::combine_latest::CombineLatest;
 
 // static operators
-pub use join_creation::combine_latest::combine_latest;
+pub use combination::combine_latest::combine_latest;
 
 /// merge is an alias of select operator in rust stream library. 
 /// Notes 
@@ -32,7 +32,7 @@ pub fn concat<S1: Stream, S2: Stream<Item=S1::Item, Error=S1::Error>>(s1: S1, s2
 /// Notes
 /// 1. The error type is either of the error happened. 
 /// 2. If any of the stream end without value, the result stream will be empty (end without value)
-pub use join_creation::fork_join::fork_join;
+pub use combination::fork_join::fork_join;
 
 impl<T> RxStreamEx for T where T: Stream {}
 
