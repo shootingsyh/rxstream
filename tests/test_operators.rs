@@ -97,3 +97,35 @@ fn test_concat_all_concats_all() {
     let r = runtime.block_on(t).unwrap();
     assert_eq!(r, [0,1,2,0,1,2,0,1,2])
 }
+
+#[test]
+fn test_race_pick_first_respond_item() {
+    fn m2(i: u64) -> u64 {
+        return i * 2;
+    }
+    fn m21(i: u64) -> u64 {
+        return i * 2 + 1;
+    }
+    let mut runtime = Runtime::new().unwrap();
+    let t1 = source::timer(3, 10).map(m2 as fn(u64) -> u64).take(3);
+    let t2 = source::timer(1, 10).map(m21 as fn(u64) -> u64).take(6);
+    let raced = race(t1, t2).collect();
+    let r = runtime.block_on(raced).unwrap();
+    assert_eq!(r, [1,3,5,7,9,11])
+}
+
+#[test]
+fn test_race_pick_first_ended() {
+    fn m2(i: u64) -> u64 {
+        return i * 2;
+    }
+    fn m21(i: u64) -> u64 {
+        return i * 2 + 1;
+    }
+    let mut runtime = Runtime::new().unwrap();
+    let t1 = source::timer(3, 10).map(m2 as fn(u64) -> u64).take(3);
+    let t2 = source::timer(1, 10).map(m21 as fn(u64) -> u64).take(0);
+    let raced = race(t1, t2).collect();
+    let r = runtime.block_on(raced).unwrap();
+    assert_eq!(r, [])
+}

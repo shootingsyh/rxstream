@@ -58,6 +58,9 @@ pub use combination::concat::concat_all;
 /// 2. If any of the stream end without value, the result stream will be empty (end without value)
 pub use combination::fork_join::fork_join;
 
+/// Pick the first stream respond. 
+pub use combination::race::race;
+
 impl<T> RxStreamEx for T where T: Stream {}
 
 // function operators
