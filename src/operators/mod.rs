@@ -48,9 +48,9 @@ pub fn merge<S1: Stream, S2: Stream<Item=S1::Item, Error=S1::Error>>(s1: S1, s2:
 /// Notes 
 /// 1. concat in rust stream library means a totally different thing. Do not confuse with
 /// the concat here which follows the rxjs naming convension. 
-pub fn concat<S1: Stream, S2: Stream<Item=S1::Item, Error=S1::Error>>(s1: S1, s2: S2) -> Chain<S1, S2> {
-    s1.chain(s2)
-}
+pub use combination::concat::concat;
+pub use combination::concat::concat_vec;
+pub use combination::concat::concat_all;
 
 /// run both stream to the end, and yield the tuple of both stream's last value as value then end. 
 /// Notes

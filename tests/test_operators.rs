@@ -78,3 +78,22 @@ fn fork_join_empty_when_any_empty() {
     let r = fork_join(t1, t2).collect().wait().unwrap();
     assert_eq!(r, vec![])
 }
+
+#[test]
+fn test_concat_vec_concats_all() {
+    let t1 = source::of(0..).take(3);
+    let t2 = source::of(1..).take(3);
+    let t3 = source::of(2..).take(3);
+    let r = concat_vec(vec![t1, t2, t3]).collect().wait().unwrap();
+    assert_eq!(r, [0,1,2,1,2,3,2,3,4])
+}
+
+#[test]
+fn test_concat_all_concats_all() {
+    let mut runtime = Runtime::new().unwrap();
+    let t = concat_all(
+        source::of(0..3).map(|i| source::timer(i*3, 10).take(3))
+    ).collect();
+    let r = runtime.block_on(t).unwrap();
+    assert_eq!(r, [0,1,2,0,1,2,0,1,2])
+}
