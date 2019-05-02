@@ -10,6 +10,7 @@ mod transform;
 pub use transform::pairwise::Pairwise;
 pub use combination::combine_latest::CombineLatest;
 pub use combination::combine_latest::CombineLatestVec;
+use super::source;
 
 // static operators
 
@@ -60,6 +61,10 @@ pub use combination::fork_join::fork_join;
 
 /// Pick the first stream respond. 
 pub use combination::race::race;
+
+pub fn start_with<S: Stream, V: IntoIterator<Item=S::Item>>(v: V, s: S) -> impl Stream<Item=S::Item, Error=S::Error> {
+    concat(source::of_with_err_type(v), s)
+}
 
 impl<T> RxStreamEx for T where T: Stream {}
 

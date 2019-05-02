@@ -15,7 +15,12 @@ pub fn interval(millis: u64) -> impl Stream<Item = u64, Error = tokio::timer::Er
     timer(0, millis)
 }
 
-pub fn of<T: Iterator>(iter: T) -> impl Stream<Item = T::Item, Error = ()> {
+pub fn of<T: IntoIterator>(iter: T) -> impl Stream<Item = T::Item, Error = ()> {
+    futures::stream::iter_ok(iter)
+}
+
+// A version of 'of' to allow specify an error type, though it won't throw error.
+pub fn of_with_err_type<T: IntoIterator, E>(iter: T) -> impl Stream<Item = T::Item, Error = E> {
     futures::stream::iter_ok(iter)
 }
 
