@@ -15,7 +15,7 @@ fn pairwise_emit_pairs() {
 #[test]
 fn combine_latest_combines_two() {
     let mut runtime = Runtime::new().unwrap();
-    let t1 = source::interval(10).take(3);
+    let t1 = source::interval_immediate(10).take(3);
     let t2 = source::timer(3, 10).take(4);
     let combined = combine_latest(t1, t2).collect();
     let r = runtime.block_on(combined).unwrap();
@@ -128,4 +128,14 @@ fn test_race_pick_first_ended() {
     let raced = race(t1, t2).collect();
     let r = runtime.block_on(raced).unwrap();
     assert_eq!(r, [])
+}
+
+#[test]
+fn test_with_latest_from_sync_the_stream() {
+    let mut runtime = Runtime::new().unwrap();
+    let s1 = source::interval(5).take(3);
+    let s2 = source::interval(1).take(100);
+    let merged = s1.with_latest_from(s2).collect();
+    let r = runtime.block_on(merged).unwrap();
+    assert_eq!(r, [(0, 4), (1, 9), (2, 14)])
 }

@@ -10,6 +10,7 @@ mod transform;
 pub use transform::pairwise::Pairwise;
 pub use combination::combine_latest::CombineLatest;
 pub use combination::combine_latest::CombineLatestVec;
+pub use combination::with_latest_from::WithLatestFrom;
 use super::source;
 
 // static operators
@@ -75,4 +76,10 @@ pub trait RxStreamEx: Stream {
     {
         Pairwise::new(self)
     }
+
+    fn with_latest_from<S2: Stream>(self, other: S2) -> WithLatestFrom<Self, S2>
+        where S2::Item: Clone, Self: Sized
+    {
+        WithLatestFrom::new(self, other)
+    }   
 }

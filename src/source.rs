@@ -12,6 +12,10 @@ pub fn timer(initial: u64, period: u64) -> impl Stream<Item = u64, Error = tokio
 
 
 pub fn interval(millis: u64) -> impl Stream<Item = u64, Error = tokio::timer::Error> {
+    timer(millis, millis)
+}
+
+pub fn interval_immediate(millis: u64) -> impl Stream<Item = u64, Error = tokio::timer::Error> {
     timer(0, millis)
 }
 
