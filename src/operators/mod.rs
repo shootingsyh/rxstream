@@ -1,10 +1,8 @@
 use futures::Stream;
 extern crate either;
-pub use either::{Either, Left, Right};
-pub use futures::stream;
-pub use futures::stream::{Select, Chain, Once, Collect};
-pub use futures::Future;
-pub use futures::future::{Join, FlattenStream};
+use either::{Either, Left, Right};
+use futures::stream::Select;
+use futures::Future;
 mod combination;
 mod transform;
 pub use transform::pairwise::Pairwise;
@@ -59,6 +57,9 @@ pub use combination::concat::concat_all;
 /// 1. The error type is either of the error happened. 
 /// 2. If any of the stream end without value, the result stream will be empty (end without value)
 pub use combination::fork_join::fork_join;
+
+/// merge two streams
+pub use futures::stream::Zip;
 
 /// Pick the first stream respond. 
 pub use combination::race::race;
