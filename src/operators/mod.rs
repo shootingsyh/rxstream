@@ -9,7 +9,7 @@ pub use transform::pairwise::Pairwise;
 pub use combination::combine_latest::CombineLatest;
 pub use combination::combine_latest::CombineLatestVec;
 pub use combination::with_latest_from::WithLatestFrom;
-pub use transform::buffer::SimpleCountBufferedStream;
+pub use transform::simple_count_buffer::SimpleCountBufferedStream;
 use super::source;
 
 // static operators
