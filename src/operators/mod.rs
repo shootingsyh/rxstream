@@ -9,6 +9,7 @@ pub use transform::pairwise::Pairwise;
 pub use combination::combine_latest::CombineLatest;
 pub use combination::combine_latest::CombineLatestVec;
 pub use combination::with_latest_from::WithLatestFrom;
+pub use transform::buffer::SimpleCountBufferedStream;
 use super::source;
 
 // static operators
@@ -83,4 +84,10 @@ pub trait RxStreamEx: Stream {
     {
         WithLatestFrom::new(self, other)
     }   
+
+    fn buffer(self, count: usize) -> SimpleCountBufferedStream<Self> 
+        where Self: Sized
+    {
+        SimpleCountBufferedStream::new(self, count)
+    }
 }

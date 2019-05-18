@@ -5,13 +5,6 @@ use tokio::prelude::*;
 use tokio::runtime::current_thread::Runtime;
 use std::time::{Duration};
 
-
-#[test]
-fn pairwise_emit_pairs() {
-    let f = source::of(0..).take(3).pairwise().collect().wait().unwrap();
-    assert_eq!(f, vec![(0,1),(1, 2)])
-}
-
 #[test]
 fn combine_latest_combines_two() {
     let mut runtime = Runtime::new().unwrap();
