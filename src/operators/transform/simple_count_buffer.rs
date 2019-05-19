@@ -26,6 +26,13 @@ impl<V> Buffer<V> for SimpleCountBuffer<V> {
             return None
         }
     }
+    fn last_poll_buffer(&mut self) -> Option<Vec<V>> {
+        if self.vec.len() > 0 {
+            Some(mem::replace(&mut self.vec, Vec::new()))
+        } else {
+            None
+        }
+    }
 }
 
 

@@ -3,6 +3,7 @@ extern crate either;
 use either::{Either, Left, Right};
 use futures::stream::Select;
 use futures::Future;
+use std::time::Duration;
 mod combination;
 mod transform;
 pub use transform::pairwise::Pairwise;
@@ -10,6 +11,7 @@ pub use combination::combine_latest::CombineLatest;
 pub use combination::combine_latest::CombineLatestVec;
 pub use combination::with_latest_from::WithLatestFrom;
 pub use transform::simple_count_buffer::SimpleCountBufferedStream;
+pub use transform::simple_time_buffer::SimpleTimeBufferredStream;
 use super::source;
 
 // static operators
@@ -85,9 +87,15 @@ pub trait RxStreamEx: Stream {
         WithLatestFrom::new(self, other)
     }   
 
-    fn buffer(self, count: usize) -> SimpleCountBufferedStream<Self> 
+    fn buffer_count(self, count: usize) -> SimpleCountBufferedStream<Self> 
         where Self: Sized
     {
         SimpleCountBufferedStream::new(self, count)
+    }
+
+    fn buffer_time(self, time_span: Duration) -> SimpleTimeBufferredStream<Self> 
+        where Self: Sized
+    {
+        SimpleTimeBufferredStream::new(self, time_span)
     }
 }
