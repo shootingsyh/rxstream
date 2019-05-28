@@ -39,7 +39,7 @@ pub type SimpleTimeBufferredStream<S: Stream> = BufferedStream<S, SimpleTimeBuff
 impl<S: Stream> SimpleTimeBufferredStream<S> {
     pub fn new(s: S, time_span: Duration) -> Self {
         SimpleTimeBufferredStream {
-            s: s,
+            s: s.fuse(),
             buffer: SimpleTimeBuffer::new(time_span),
         }
     }

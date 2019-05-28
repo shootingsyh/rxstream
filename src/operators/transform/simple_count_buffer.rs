@@ -8,7 +8,7 @@ pub struct SimpleCountBuffer<V> {
     max_count: usize,
 }
 impl<V> SimpleCountBuffer<V> {
-    fn new(max_count: usize) -> Self {
+    pub fn new(max_count: usize) -> Self {
         SimpleCountBuffer {
             vec: Vec::with_capacity(max_count),
             max_count: max_count,
@@ -26,7 +26,7 @@ impl<V> Buffer<V> for SimpleCountBuffer<V> {
             return None
         }
     }
-    fn last_poll_buffer(&mut self) -> Option<Vec<V>> {
+    fn poll_buffer_after_done(&mut self) -> Option<Vec<V>> {
         if self.vec.len() > 0 {
             Some(mem::replace(&mut self.vec, Vec::new()))
         } else {
@@ -40,7 +40,7 @@ pub type SimpleCountBufferedStream<S: Stream> = BufferedStream<S, SimpleCountBuf
 impl<S: Stream> SimpleCountBufferedStream<S> {
     pub fn new(s: S, max_count: usize) -> Self {
         SimpleCountBufferedStream {
-            s: s,
+            s: s.fuse(),
             buffer: SimpleCountBuffer::new(max_count),
         }
     }

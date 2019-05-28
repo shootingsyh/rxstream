@@ -39,3 +39,27 @@ fn simple_time_buffer_emit_vecs_from() {
     let r = runtime.block_on(f).unwrap();
     assert_eq!(r, vec![vec![0], vec![1, 2], vec![3, 4], vec![5, 6]])
 }
+
+#[test]
+fn overlapped_count_buffer_skip_large_than_count() {
+    let f = source::of(0..).buffer_count_with_skip(2, 3).take(3).collect().wait().unwrap();
+    assert_eq!(f, vec![[0, 1], [3, 4], [6, 7]])
+}
+
+#[test]
+fn overlapped_count_buffer_skip_large_than_count_with_leftover() {
+    let f = source::of(0..).take(7).buffer_count_with_skip(2, 3).take(3).collect().wait().unwrap();
+    assert_eq!(f, vec![vec![0, 1], vec![3, 4], vec![6]])
+}
+
+#[test]
+fn overlapped_count_buffer_skip_smaller_than_count() {
+    let f = source::of(0..).buffer_count_with_skip(3, 2).take(3).collect().wait().unwrap();
+    assert_eq!(f, vec![[0, 1, 2], [2, 3, 4], [4, 5, 6]])
+}
+
+#[test]
+fn overlapped_count_buffer_skip_smaller_than_count_with_leftover() {
+    let f = source::of(0..).take(6).buffer_count_with_skip(3, 2).take(3).collect().wait().unwrap();
+    assert_eq!(f, vec![vec![0, 1, 2], vec![2, 3, 4], vec![4, 5]])
+}

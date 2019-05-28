@@ -11,6 +11,7 @@ pub use combination::combine_latest::CombineLatest;
 pub use combination::combine_latest::CombineLatestVec;
 pub use combination::with_latest_from::WithLatestFrom;
 pub use transform::simple_count_buffer::SimpleCountBufferedStream;
+pub use transform::overlapped_buffer::OverlappedCountBufferedStream;
 pub use transform::simple_time_buffer::SimpleTimeBufferredStream;
 use super::source;
 
@@ -93,9 +94,17 @@ pub trait RxStreamEx: Stream {
         SimpleCountBufferedStream::new(self, count)
     }
 
+    fn buffer_count_with_skip(self, count: usize, skip: usize) -> OverlappedCountBufferedStream<Self>
+        where Self: Sized, Self::Item: Clone
+    {
+        OverlappedCountBufferedStream::new(self, count, skip)
+    }
+
     fn buffer_time(self, time_span: Duration) -> SimpleTimeBufferredStream<Self> 
         where Self: Sized
     {
         SimpleTimeBufferredStream::new(self, time_span)
     }
+
+
 }
