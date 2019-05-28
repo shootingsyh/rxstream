@@ -1,5 +1,4 @@
 use rxstream::source;
-use rxstream::operators::*;
 use rxstream::operators::RxStreamEx;
 use tokio::prelude::*;
 use tokio::runtime::current_thread::Runtime;
