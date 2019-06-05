@@ -15,7 +15,8 @@ impl<V> SimpleCountBuffer<V> {
         }
     }
 }
-impl<V> Buffer<V> for SimpleCountBuffer<V> {
+impl<V> Buffer for SimpleCountBuffer<V> {
+    type V = V;
     fn insert(&mut self, v:V) -> () {
         self.vec.push(v);
     }

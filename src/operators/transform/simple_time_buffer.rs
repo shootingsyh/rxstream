@@ -18,7 +18,8 @@ impl<V> SimpleTimeBuffer<V> {
         }
     }
 }
-impl<V> Buffer<V> for SimpleTimeBuffer<V> {
+impl<V> Buffer for SimpleTimeBuffer<V> {
+    type V = V;
     fn insert(&mut self, v:V) -> () {
         self.vec.push(v);
     }

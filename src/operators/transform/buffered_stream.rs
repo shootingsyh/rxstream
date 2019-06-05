@@ -1,25 +1,26 @@
 use futures::{Stream, Async, Poll};
 use futures::stream::Fuse;
 
-pub trait Buffer<V> {
-    fn insert(&mut self, v: V) -> ();
-    fn poll_buffer(&mut self) -> Option<Vec<V>>;
+pub trait Buffer {
+    type V;
+    fn insert(&mut self, v: Self::V) -> ();
+    fn poll_buffer(&mut self) -> Option<Vec<Self::V>>;
     /// A function will only be called once the buffered stream end,
     /// so the buffer can decide whether to return the partially buffered item.
     /// By default it calls to poll_buffer
-    fn poll_buffer_after_done(&mut self) -> Option<Vec<V>> {
+    fn poll_buffer_after_done(&mut self) -> Option<Vec<Self::V>> {
         return self.poll_buffer();
     }
 }
 
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
-pub struct BufferedStream<S: Stream, B: Buffer<S::Item>> {
+pub struct BufferedStream<S: Stream, B: Buffer<V=S::Item>> {
     pub s: Fuse<S>,
     pub buffer: B,
 }
 
-impl<S, B> Stream for BufferedStream<S,B> where S: Stream, B: Buffer<S::Item>  {
+impl<S, B> Stream for BufferedStream<S,B> where S: Stream, B: Buffer<V=S::Item>  {
     type Item = Vec<S::Item>;
     type Error = S::Error;
 
