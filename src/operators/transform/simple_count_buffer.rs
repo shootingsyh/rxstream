@@ -37,7 +37,7 @@ impl<V> Buffer for SimpleCountBuffer<V> {
 }
 
 
-pub type SimpleCountBufferedStream<S: Stream> = BufferedStream<S, SimpleCountBuffer<S::Item>>;
+pub type SimpleCountBufferedStream<S> = BufferedStream<S, SimpleCountBuffer<<S as Stream>::Item>>;
 impl<S: Stream> SimpleCountBufferedStream<S> {
     pub fn new(s: S, max_count: usize) -> Self {
         SimpleCountBufferedStream {

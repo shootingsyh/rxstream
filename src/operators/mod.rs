@@ -11,7 +11,7 @@ pub use combination::combine_latest::CombineLatest;
 pub use combination::combine_latest::CombineLatestVec;
 pub use combination::with_latest_from::WithLatestFrom;
 pub use transform::simple_count_buffer::SimpleCountBufferedStream;
-pub use transform::overlapped_buffer::OverlappedCountBufferedStream;
+pub use transform::overlapped_count_buffer::OverlappedCountBufferedStream;
 pub use transform::simple_time_buffer::SimpleTimeBufferredStream;
 use super::source;
 

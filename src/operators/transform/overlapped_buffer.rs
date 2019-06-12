@@ -1,6 +1,4 @@
-use super::buffered_stream::{Buffer, BufferedStream};
-use super::simple_count_buffer::SimpleCountBuffer;
-use futures::Stream;
+use super::buffered_stream::Buffer;
 use std::collections::VecDeque;
 
 pub trait BufferOpener {
@@ -14,13 +12,13 @@ pub trait BufferCreator<V> {
 
 #[derive(Default)]
 pub struct OverlappedBuffer<B, O: BufferOpener, C: BufferCreator<B::V, B=B>> where B: Buffer, B::V: Clone {
-    buffers: VecDeque<B>,
-    opener: O,
-    creator: C
+    pub buffers: VecDeque<B>,
+    pub opener: O,
+    pub creator: C
 }
 
 impl<B: Buffer, O: BufferOpener, C: BufferCreator<B::V, B=B>> OverlappedBuffer<B, O, C> where B::V: Clone {
-    fn new_internal(opener: O, creator: C) -> Self {
+    pub fn new_internal(opener: O, creator: C) -> Self {
         OverlappedBuffer {
             buffers: VecDeque::new(),
             opener: opener,
@@ -67,57 +65,6 @@ impl<B: Buffer, O: BufferOpener, C: BufferCreator<B::V, B=B>> Buffer for Overlap
             }
         } else {
             None
-        }
-    }
-}
-#[derive(Default)] 
-pub struct CountBufferOpener {
-    skip: usize,
-    skip_count: usize,
-}
-pub struct CountBufferCreator {
-    max_count: usize,
-}
-impl BufferOpener for CountBufferOpener {
-    fn check_open(&mut self) -> bool {
-        self.skip_count += 1;
-        if self.skip_count == self.skip {
-            self.skip_count = 0;
-            true
-        } else {
-            false
-        }
-    }
-}
-impl<V: Clone> BufferCreator<V> for CountBufferCreator {
-    type B = SimpleCountBuffer<V>;
-    fn new_buffer(&mut self) -> SimpleCountBuffer<V> {
-        SimpleCountBuffer::new(self.max_count)
-    }
-}
-
-pub type OverlappedCountBuffer<V> = OverlappedBuffer<SimpleCountBuffer<V>, CountBufferOpener, CountBufferCreator>;
-
-impl<V: Clone> OverlappedCountBuffer<V> {
-    fn new(max_count: usize, skip: usize) -> Self {
-        let mut r = OverlappedCountBuffer::new_internal(CountBufferOpener {
-            skip: skip,
-            skip_count: 0,
-        }, CountBufferCreator {
-            max_count: max_count,
-        });
-        let b = <CountBufferCreator as BufferCreator<V>>::new_buffer(&mut r.creator);
-        r.buffers.push_back(b);
-        r
-    } 
-}
-
-pub type OverlappedCountBufferedStream<S: Stream> where S::Item: Clone = BufferedStream<S, OverlappedCountBuffer<S::Item>>;
-impl<S: Stream> OverlappedCountBufferedStream<S> where S::Item: Clone {
-    pub fn new(s: S, max_count: usize, skip: usize) -> Self {
-        OverlappedCountBufferedStream {
-            s: s.fuse(),
-            buffer: OverlappedCountBuffer::new(max_count, skip),
         }
     }
 }

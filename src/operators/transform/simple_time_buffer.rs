@@ -36,7 +36,7 @@ impl<V> Buffer for SimpleTimeBuffer<V> {
 }
 
 
-pub type SimpleTimeBufferredStream<S: Stream> = BufferedStream<S, SimpleTimeBuffer<S::Item>>;
+pub type SimpleTimeBufferredStream<S> = BufferedStream<S, SimpleTimeBuffer<<S as Stream>::Item>>;
 impl<S: Stream> SimpleTimeBufferredStream<S> {
     pub fn new(s: S, time_span: Duration) -> Self {
         SimpleTimeBufferredStream {
