@@ -5,19 +5,18 @@ pub trait BufferOpener {
     fn check_open(&mut self) -> bool;
 }
 
-pub trait BufferCreator<V> {
-    type B: Buffer<V=V>;
-    fn new_buffer(&mut self) -> Self::B;
+pub trait BufferCreator<B> {
+    fn new_buffer(&mut self) -> B;
 }
 
 #[derive(Default)]
-pub struct OverlappedBuffer<B, O: BufferOpener, C: BufferCreator<B::V, B=B>> where B: Buffer, B::V: Clone {
+pub struct OverlappedBuffer<B, O: BufferOpener, C: BufferCreator<B>> where B: Buffer, B::V: Clone {
     pub buffers: VecDeque<B>,
     pub opener: O,
     pub creator: C
 }
 
-impl<B: Buffer, O: BufferOpener, C: BufferCreator<B::V, B=B>> OverlappedBuffer<B, O, C> where B::V: Clone {
+impl<B: Buffer, O: BufferOpener, C: BufferCreator<B>> OverlappedBuffer<B, O, C> where B::V: Clone {
     pub fn new_internal(opener: O, creator: C) -> Self {
         OverlappedBuffer {
             buffers: VecDeque::new(),
@@ -27,7 +26,7 @@ impl<B: Buffer, O: BufferOpener, C: BufferCreator<B::V, B=B>> OverlappedBuffer<B
     }
 }
 
-impl<B: Buffer, O: BufferOpener, C: BufferCreator<B::V, B=B>> Buffer for OverlappedBuffer<B, O, C> where B::V: Clone {
+impl<B: Buffer, O: BufferOpener, C: BufferCreator<B>> Buffer for OverlappedBuffer<B, O, C> where B::V: Clone {
     type V = B::V;
 
     fn insert(&mut self, v:Self::V) -> () {

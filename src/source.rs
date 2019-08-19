@@ -2,21 +2,24 @@ use futures::Stream;
 use tokio::timer::Interval;
 use std::time::{Duration, Instant};
 
-pub fn timer(initial: u64, period: u64) -> impl Stream<Item = u64, Error = tokio::timer::Error> {
+pub type TimerStream = impl Stream<Item = u64, Error = tokio::timer::Error>;
+
+pub fn timer(initial: u64, period: u64) -> TimerStream {
     let iter = 0u64..;
-    Interval::new(
+    let b = Interval::new(
         Instant::now() + Duration::from_millis(initial), 
         Duration::from_millis(period),
-    ).zip(futures::stream::iter_ok(iter)).map(|r| r.1)
+    ).zip(futures::stream::iter_ok(iter)).map(|r| r.1);
+    b
 }
 
 
-pub fn interval(millis: u64) -> impl Stream<Item = u64, Error = tokio::timer::Error> {
+pub fn interval(millis: u64) -> TimerStream {
     timer(millis, millis)
 }
 
 /// Interval which emit the first value immediately rather than wait for the first period pass
-pub fn interval_immediate(millis: u64) -> impl Stream<Item = u64, Error = tokio::timer::Error> {
+pub fn interval_immediate(millis: u64) -> TimerStream {
     timer(0, millis)
 }
 

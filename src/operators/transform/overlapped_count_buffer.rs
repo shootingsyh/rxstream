@@ -22,8 +22,7 @@ impl BufferOpener for CountBufferOpener {
         }
     }
 }
-impl<V: Clone> BufferCreator<V> for CountBufferCreator {
-    type B = SimpleCountBuffer<V>;
+impl<V: Clone> BufferCreator<SimpleCountBuffer<V>> for CountBufferCreator {
     fn new_buffer(&mut self) -> SimpleCountBuffer<V> {
         SimpleCountBuffer::new(self.max_count)
     }
@@ -39,7 +38,7 @@ impl<V: Clone> OverlappedCountBuffer<V> {
         }, CountBufferCreator {
             max_count: max_count,
         });
-        let b = <CountBufferCreator as BufferCreator<V>>::new_buffer(&mut r.creator);
+        let b = <CountBufferCreator as BufferCreator<SimpleCountBuffer<V>>>::new_buffer(&mut r.creator);
         r.buffers.push_back(b);
         r
     } 

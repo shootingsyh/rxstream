@@ -1,3 +1,4 @@
+#![feature(type_alias_impl_trait)]
 /// A library which provide similar functionality of rxjs in rust.
 /// See usage in https://rxjs-dev.firebaseapp.com/guide/operators
 /// It supports most of the operators in rxjs. But due to language difference,

@@ -143,7 +143,7 @@ impl<S> Stream for CombineLatestVec<S>
         S: Stream, 
         S::Item: Clone,  
 {
-    type Item = (Vec<S::Item>);
+    type Item = Vec<S::Item>;
     type Error = S::Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {

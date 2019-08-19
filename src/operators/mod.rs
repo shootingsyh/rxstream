@@ -3,7 +3,6 @@ extern crate either;
 use either::{Either, Left, Right};
 use futures::stream::Select;
 use futures::Future;
-use std::time::Duration;
 mod combination;
 mod transform;
 pub use transform::pairwise::Pairwise;
@@ -13,6 +12,7 @@ pub use combination::with_latest_from::WithLatestFrom;
 pub use transform::simple_count_buffer::SimpleCountBufferedStream;
 pub use transform::overlapped_count_buffer::OverlappedCountBufferedStream;
 pub use transform::simple_time_buffer::SimpleTimeBufferredStream;
+pub use transform::overlapped_time_buffer::OverlappedTimeBufferedStream;
 use super::source;
 
 // static operators
@@ -100,11 +100,20 @@ pub trait RxStreamEx: Stream {
         OverlappedCountBufferedStream::new(self, count, skip)
     }
 
-    fn buffer_time(self, time_span: Duration) -> SimpleTimeBufferredStream<Self> 
+    fn buffer_time(self, time_span: u64) -> SimpleTimeBufferredStream<Self> 
         where Self: Sized
     {
         SimpleTimeBufferredStream::new(self, time_span)
     }
 
+    fn buffer_time_with_creation_interval(
+        self, 
+        time_span: u64, 
+        creation_interval: u64,
+    ) -> OverlappedTimeBufferedStream<Self> 
+        where Self: Sized, Self::Item: Clone
+    {
+        OverlappedTimeBufferedStream::new(self, time_span, creation_interval)
+    }
 
 }

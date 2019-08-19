@@ -32,11 +32,19 @@ fn simple_count_buffer_emit_vecs_from_timer() {
 }
 
 #[test]
-fn simple_time_buffer_emit_vecs_from() {
+fn simple_time_buffer_emit_vecs_from_timer() {
     let mut runtime = Runtime::new().unwrap();
-    let f = source::interval(30).buffer_time(Duration::from_millis(50)).take(4).collect();
+    let f = source::interval(31).buffer_time(50).take(4).collect();
     let r = runtime.block_on(f).unwrap();
-    assert_eq!(r, vec![vec![0], vec![1, 2], vec![3, 4], vec![5, 6]])
+    assert_eq!(r, vec![vec![0], vec![1, 2], vec![3], vec![4, 5]])
+}
+
+#[test]
+fn simple_time_buffer_emit_vecs_with_less_duration() {
+    let mut runtime = Runtime::new().unwrap();
+    let f = source::interval_immediate(30).buffer_time(12).take(4).collect();
+    let r = runtime.block_on(f).unwrap();
+    assert_eq!(r, vec![vec![0], vec![], vec![1], vec![]])
 }
 
 #[test]
@@ -61,4 +69,28 @@ fn overlapped_count_buffer_skip_smaller_than_count() {
 fn overlapped_count_buffer_skip_smaller_than_count_with_leftover() {
     let f = source::of(0..).take(6).buffer_count_with_skip(3, 2).take(3).collect().wait().unwrap();
     assert_eq!(f, vec![vec![0, 1, 2], vec![2, 3, 4], vec![4, 5]])
+}
+
+#[test]
+fn ovlapped_time_buffer_creation_time_large_than_span() {
+    let mut runtime = Runtime::new().unwrap();
+    let f = source::interval(10)
+        .buffer_time_with_creation_interval(
+            35, 
+            45
+        ).take(3).collect();
+    let r = runtime.block_on(f).unwrap();
+    assert_eq!(r, vec![[0, 1, 2], [5, 6, 7], [10, 11, 12]])
+}
+
+#[test]
+fn ovlapped_time_buffer_creation_time_smaller_than_span() {
+    let mut runtime = Runtime::new().unwrap();
+    let f = source::interval(10)
+        .buffer_time_with_creation_interval(
+            35, /* time_span */
+            15  /* creation_interval*/
+        ).take(3).collect();
+    let r = runtime.block_on(f).unwrap();
+    assert_eq!(r, vec![[0, 1, 2], [2, 3, 4], [4, 5, 6]])
 }
