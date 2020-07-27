@@ -1,9 +1,11 @@
-extern crate either;
-use either::{Either, Left, Right};
-use futures::{Stream, Async, Poll};
+use futures::{Stream};
 use futures::stream::Fuse;
+use futures::StreamExt;
+use futures::task::{Context, Poll};
+use pin_project::{pin_project};
+use core::pin::Pin;
 
-
+#[pin_project(project = CombineLatestProj)]
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct CombineLatest<S1, S2> 
@@ -13,14 +15,16 @@ pub struct CombineLatest<S1, S2>
         S2: Stream,
         S2::Item: Clone
 {
+    #[pin]
     s1: Fuse<S1>,
+    #[pin]
     s2: Fuse<S2>,
     queued1: Option<S1::Item>,
     queued2: Option<S2::Item>,
 }
 
 pub fn combine_latest<S1, S2>(s1: S1, s2: S2) -> 
-    impl Stream<Item=(S1::Item, S2:: Item), Error=Either<S1::Error, S2::Error>> 
+    impl Stream<Item=(S1::Item, S2:: Item)> 
     where 
     S1: Stream, 
     S1::Item: Clone, 
@@ -61,47 +65,50 @@ impl<S1, S2> Stream for CombineLatest<S1, S2>
         S2::Item: Clone, 
 {
     type Item = (S1::Item, S2::Item);
-    type Error = Either<S1::Error, S2::Error>;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        let s1_ready = match self.s1.poll() {
-            Ok(Async::Ready(Some(item1))) => {
-                self.queued1 = Some(item1);
+    fn poll_next(
+        self: Pin<&mut Self>, 
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let CombineLatestProj { mut s1, mut s2, queued1, queued2 } = self.project();
+
+        let s1_ready = match s1.as_mut().poll_next(cx) {
+            Poll::Ready(Some(item1)) => {
+                *queued1 = Some(item1);
                 true
             }
-            Ok(Async::Ready(None)) | Ok(Async::NotReady) => false,
-            Err(e) => return Err(Left(e))
+            Poll::Ready(None) | Poll::Pending => false
         };
 
-        let s2_ready = match self.s2.poll() {
-            Ok(Async::Ready(Some(item2))) => {
-                self.queued2 = Some(item2);
+        let s2_ready = match s2.as_mut().poll_next(cx) {
+            Poll::Ready(Some(item2)) => {
+                *queued2 = Some(item2);
                 true
             }
-            Ok(Async::Ready(None)) | Ok(Async::NotReady) => false,
-            Err(e) => return Err(Right(e))
+            Poll::Ready(None) | Poll::Pending => false
         };
 
-        if self.queued1.is_some() && 
-            self.queued2.is_some() && 
+        if queued1.is_some() && 
+            queued2.is_some() && 
             (s1_ready || s2_ready) {
                 let pair = (
-                    self.queued1.clone().unwrap(),
-                    self.queued2.clone().unwrap()
+                    queued1.clone().unwrap(),
+                    queued2.clone().unwrap()
                 );
-                Ok(Async::Ready(Some(pair)))
-        } else if self.s1.is_done() && self.s2.is_done() {
-            Ok(Async::Ready(None))
-        } else if self.s1.is_done() && self.queued1.is_none() ||
-            self.s2.is_done() && self.queued2.is_none() 
+                Poll::Ready(Some(pair))
+        } else if s1.is_done() && s2.is_done() {
+            Poll::Ready(None)
+        } else if s1.is_done() && queued1.is_none() ||
+            s2.is_done() && queued2.is_none() 
         {
-            Ok(Async::Ready(None))
+            Poll::Ready(None)
         } else {
-            Ok(Async::NotReady)
+            Poll::Pending
         }
     }
 }
 
+#[pin_project(project = CombineLatestVecProj)]
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct CombineLatestVec<S: Stream> 
@@ -112,7 +119,7 @@ pub struct CombineLatestVec<S: Stream>
 }
 
 pub fn combine_latest_vec<S>(s: Vec<S>) -> 
-    impl Stream<Item=Vec<S::Item>, Error=S::Error> 
+    impl Stream<Item=Vec<S::Item>> 
     where 
     S: Stream, 
     S::Item: Clone, 
@@ -144,48 +151,50 @@ impl<S> Stream for CombineLatestVec<S>
         S::Item: Clone,  
 {
     type Item = Vec<S::Item>;
-    type Error = S::Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+    fn poll_next(
+        self: Pin<&mut Self>, 
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let CombineLatestVecProj { s_list, queued_list } = self.project();
         let mut done_count = 0;
-        let len = self.s_list.len();
-        for (i, s) in self.s_list.iter_mut().enumerate() {
-            let has_new = match s.poll() {
-                Ok(Async::Ready(Some(item1))) => {
-                    self.queued_list[i] = Some(item1);
+        let len = s_list.len();
+        for (i, s) in s_list.iter_mut().enumerate() {
+            let has_new = match unsafe{Pin::new_unchecked(s)}.poll_next(cx) {
+                Poll::Ready(Some(item1)) => {
+                    queued_list[i] = Some(item1);
                     true
                 }
-                Ok(Async::Ready(None)) => {
+                Poll::Ready(None) => {
                     done_count+= 1; 
-                    if !self.queued_list[i].is_some() {
+                    if !queued_list[i].is_some() {
                         // if some stream end but has not yield any value, the entier result done
-                        return Ok(Async::Ready(None))
+                        return Poll::Ready(None)
                     }
                     false
-                },
-                Ok(Async::NotReady) => false,
-                Err(e) => return Err(e)
+                }
+                Poll::Pending => false
             };
             // If anyone ready
             if has_new {
-                let mut r = Vec::with_capacity(self.s_list.len());
-                for q in &self.queued_list {
+                let mut r = Vec::with_capacity(len);
+                for q in queued_list {
                     if q.is_some() {
                         r.push(q.clone().unwrap());
                     } else {
                         // If any queued item is not filled, the stream is not ready
-                        return Ok(Async::NotReady);
+                        return Poll::Pending;
                     }
                 }
-                return Ok(Async::Ready(Some(r)))
+                return Poll::Ready(Some(r));
             }
         }
         // Not a single has_new
         if done_count == len {
             // everyone is done 
-            Ok(Async::Ready(None))
+            Poll::Ready(None)
         } else {
-            Ok(Async::NotReady)
+            Poll::Pending
         }
     }
 }

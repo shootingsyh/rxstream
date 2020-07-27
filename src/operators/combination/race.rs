@@ -1,22 +1,31 @@
-use core::mem;
-use futures::{Stream, Async, Poll};
+use futures::task::Poll;
+use futures::task::Context;
+use std::pin::Pin;
+use futures::Stream;
+use pin_project::pin_project;
 
-
+#[pin_project(project=RaceProj)]
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
-pub struct Race<S: Stream>(RaceState<S>);
+pub struct Race<S: Stream> {
+    #[pin]
+    s1: S,
+    #[pin]
+    s2: S,
+    state: RaceState,
+}
 
 #[derive(Debug)]
-enum RaceState<S: Stream> {
-    Pending(S, S),
-    Pick(S),
-    Temp,
+enum RaceState {
+    Pending,
+    Pick1,
+    Pick2,
 }
 
 impl<S: Stream> Race<S> {
     pub fn new(stream1: S, stream2: S) -> Race<S>
     {
-        Race(RaceState::Pending(stream1, stream2))
+        Race{s1: stream1, s2: stream2, state: RaceState::Pending}
     }
 }
 
@@ -26,34 +35,31 @@ pub fn race<S: Stream>(s1: S, s2: S) -> Race<S> {
 
 impl<S: Stream> Stream for Race<S> {
     type Item = S::Item;
-    type Error = S::Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        match &mut self.0 {
-            RaceState::Pending(s1, s2) => {
-                match s1.poll() {
-                    Ok(Async::NotReady) => (),
+    fn poll_next(
+        self: Pin<&mut Self>, 
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+        match this.state {
+            RaceState::Pending => {
+                match this.s1.poll_next(cx) {
+                    Poll::Pending => (),
                     x => {
-                        self.0 = match mem::replace(&mut self.0, RaceState::Temp) {
-                            RaceState::Pending(s1, _s2) => RaceState::Pick(s1),
-                            _ => unreachable!(),
-                        };
+                        *this.state = RaceState::Pick1;
                         return x
                     }
                 };
-                match s2.poll() {
-                    Ok(Async::NotReady) => Ok(Async::NotReady),
+                match this.s2.poll_next(cx) {
+                    Poll::Pending => Poll::Pending,
                     x => {
-                        self.0 = match mem::replace(&mut self.0, RaceState::Temp) {
-                            RaceState::Pending(_s1, s2) => RaceState::Pick(s2),
-                            _ => unreachable!(),
-                        };
+                        *this.state = RaceState::Pick2;
                         return x
                     }
                 }
             },
-            RaceState::Pick(s) => return s.poll(),
-            RaceState::Temp => unreachable!(),
+            RaceState::Pick1 => return this.s1.poll_next(cx),
+            RaceState::Pick2 => return this.s2.poll_next(cx),
         }
     }
 }

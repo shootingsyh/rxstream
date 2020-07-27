@@ -1,10 +1,16 @@
-use futures::{Stream, Async, Poll};
+use futures::task::Poll;
+use futures::task::Context;
+use std::pin::Pin;
+use futures::{Stream, StreamExt};
 use futures::stream::Fuse;
 use std::mem;
+use pin_project::pin_project;
 
+#[pin_project(project=PairwiseProj)]
 #[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
 pub struct Pairwise<S> where S: Stream, S::Item: Clone {
+    #[pin]
     s: Fuse<S>,
     previous: Option<S::Item>,
 }
@@ -20,28 +26,31 @@ impl<S> Pairwise<S> where S: Stream, S::Item: Clone {
 
 impl<S> Stream for Pairwise<S> where S: Stream, S::Item: Clone {
     type Item = (<S as Stream>::Item, <S as Stream>::Item);
-    type Error = <S as Stream>::Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        if self.previous.is_none() {
-            let inner = futures::try_ready!(self.s.poll());
+    fn poll_next(
+        self: Pin<&mut Self>, 
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        let PairwiseProj {mut s, previous} = self.project();
+        if previous.is_none() {
+            let inner = futures::ready!(s.as_mut().poll_next(cx));
             match inner {
-                Some(item) => self.previous = Some(item),
-                None => return Ok(Async::Ready(None))
+                Some(item) => *previous = Some(item),
+                None => return Poll::Ready(None)
             }
         }
-        let inner2 = try_ready!(self.s.poll());
+        let inner2 = ready!(s.poll_next(cx));
         match inner2 {
             Some(item) => {
                 let current = item.clone();
-                return Ok(Async::Ready(Some(
+                return Poll::Ready(Some(
                     (
-                        mem::replace(&mut self.previous, Some(item)).unwrap(), 
+                        mem::replace(previous, Some(item)).unwrap(), 
                         current
                     )
-                )));
+                ));
             },
-            None => return Ok(Async::Ready(None))
+            None => return Poll::Ready(None)
         }
     }
 }

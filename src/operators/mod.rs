@@ -1,8 +1,6 @@
-use futures::Stream;
-extern crate either;
-use either::{Either, Left, Right};
+use std::pin::Pin;
+use futures::{Stream, StreamExt, FutureExt};
 use futures::stream::Select;
-use futures::Future;
 mod combination;
 mod transform;
 pub use transform::pairwise::Pairwise;
@@ -11,7 +9,7 @@ pub use combination::combine_latest::CombineLatestVec;
 pub use combination::with_latest_from::WithLatestFrom;
 pub use transform::simple_count_buffer::SimpleCountBufferedStream;
 pub use transform::overlapped_count_buffer::OverlappedCountBufferedStream;
-pub use transform::simple_time_buffer::SimpleTimeBufferredStream;
+pub use transform::simple_time_buffer::{SimpleExternalTimeBufferredStream, SimpleTimeBufferredStream};
 pub use transform::overlapped_time_buffer::OverlappedTimeBufferedStream;
 use super::source;
 
@@ -31,12 +29,11 @@ pub use combination::combine_latest::combine_latest_vec;
 /// combine_all
 /// See warning in combine_latest as this one use same logic there. 
 pub fn combine_all<SInner: Stream, SOuter: Stream<Item=SInner>>(s: SOuter) -> 
-    impl Stream<Item=Vec<SInner::Item>, Error=Either<SInner::Error, SOuter::Error>> 
+    impl Stream<Item=Vec<SInner::Item>> 
     where SInner::Item: Clone
 {
     s.collect()
-        .map(|streams| combine_latest_vec(streams).map_err(|e| Left(e)))
-        .map_err(|e| Right(e))
+        .map(|streams| combine_latest_vec(streams))
         .flatten_stream()
 }
 
@@ -44,8 +41,8 @@ pub fn combine_all<SInner: Stream, SOuter: Stream<Item=SInner>>(s: SOuter) ->
 /// Notes 
 /// 1. merge in rust stream library is a deprecated operator, and replaced by select. 
 /// 2. The 'concurrent' parameter is not supported due to we only support two operands.
-pub fn merge<S1: Stream, S2: Stream<Item=S1::Item, Error=S1::Error>>(s1: S1, s2: S2) -> Select<S1, S2> {
-    s1.select(s2)
+pub fn merge<S1: Stream, S2: Stream<Item=S1::Item>>(s1: S1, s2: S2) -> Select<S1, S2> {
+    futures::stream::select(s1, s2)
 }
 
 /// concat is an alias of chain operator in rust. 
@@ -68,8 +65,8 @@ pub use futures::stream::Zip;
 /// Pick the first stream respond. 
 pub use combination::race::race;
 
-pub fn start_with<S: Stream, V: IntoIterator<Item=S::Item>>(v: V, s: S) -> impl Stream<Item=S::Item, Error=S::Error> {
-    concat(source::of_with_err_type(v), s)
+pub fn start_with<S: Stream, V: IntoIterator<Item=S::Item>>(v: V, s: S) -> impl Stream<Item=S::Item> {
+    concat(source::of(v), s)
 }
 
 impl<T> RxStreamEx for T where T: Stream {}
@@ -104,6 +101,12 @@ pub trait RxStreamEx: Stream {
         where Self: Sized
     {
         SimpleTimeBufferredStream::new(self, time_span)
+    }
+
+    fn buffer_time_with_external_timer(self, timer_stream: Pin<&mut source::TimerStream>) -> SimpleExternalTimeBufferredStream<Self> 
+        where Self: Sized
+    {
+        SimpleExternalTimeBufferredStream::new_with_timer_stream(self, timer_stream)
     }
 
     fn buffer_time_with_creation_interval(

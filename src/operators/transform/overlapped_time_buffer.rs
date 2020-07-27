@@ -2,7 +2,7 @@ use super::overlapped_buffer::{BufferCreator, BufferOpener, OverlappedBuffer};
 use super::buffered_stream::BufferedStream;
 use super::simple_time_buffer::{new_simple_time_buffer, SimpleTimeBuffer};
 use std::time::{Duration, Instant};
-use futures::{Stream};
+use futures::{Stream, StreamExt};
 
 
 pub struct TimeBufferOpener {

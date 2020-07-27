@@ -1,6 +1,7 @@
+use futures::task::Context;
 use super::buffered_stream::{Buffer, BufferedStream};
 use std::mem;
-use futures::Stream;
+use futures::{Stream, StreamExt};
 
 #[derive(Default)]
 pub struct SimpleCountBuffer<V> {
@@ -20,14 +21,14 @@ impl<V> Buffer for SimpleCountBuffer<V> {
     fn insert(&mut self, v:V) -> () {
         self.vec.push(v);
     }
-    fn poll_buffer(&mut self) -> Option<Vec<V>> {
+    fn poll_buffer(&mut self, _cx: &mut Context) -> Option<Vec<V>> {
         if self.vec.len() == self.max_count {
             return Some(mem::replace(&mut self.vec, Vec::new()))
         } else {
             return None
         }
     }
-    fn poll_buffer_after_done(&mut self) -> Option<Vec<V>> {
+    fn poll_buffer_after_done(&mut self, _cx: &mut Context) -> Option<Vec<V>> {
         if self.vec.len() > 0 {
             Some(mem::replace(&mut self.vec, Vec::new()))
         } else {

@@ -1,12 +1,10 @@
 use rxstream::source;
-use tokio::prelude::*;
+use futures::StreamExt;
 use rxstream::operators::RxStreamEx;
 
-fn main() {
-    let task = source::interval(1000).take(5).pairwise().for_each(|t| {
-        println!("{:?}", t);
-        Ok(())
-    }).map_err(|e| panic!("err={:?}", e));
-    
-    tokio::run(task);
+#[tokio::main]
+async fn main() -> () {
+    source::interval(1000).take(5).pairwise().map(|t| {
+        println!("{:?}", t)
+    }).collect::<()>().await;
 }

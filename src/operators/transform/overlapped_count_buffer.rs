@@ -1,7 +1,7 @@
 use super::overlapped_buffer::{BufferCreator, BufferOpener, OverlappedBuffer};
 use super::buffered_stream::BufferedStream;
 use super::simple_count_buffer::SimpleCountBuffer;
-use futures::Stream;
+use futures::{Stream, StreamExt};
 
 #[derive(Default)] 
 pub struct CountBufferOpener {

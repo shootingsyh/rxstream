@@ -1,3 +1,4 @@
+use futures::task::Context;
 use super::buffered_stream::Buffer;
 use std::collections::VecDeque;
 
@@ -37,9 +38,9 @@ impl<B: Buffer, O: BufferOpener, C: BufferCreator<B>> Buffer for OverlappedBuffe
             self.buffers.push_back(self.creator.new_buffer())
         }
     }
-    fn poll_buffer(&mut self) -> Option<Vec<Self::V>> {
+    fn poll_buffer(&mut self, cx: &mut Context) -> Option<Vec<Self::V>> {
         let result = if let Some(front) = self.buffers.front_mut() {
-            if let Some(r) = front.poll_buffer() {
+            if let Some(r) = front.poll_buffer(cx) {
                 Some(r)
             } else {
                 None
@@ -53,11 +54,11 @@ impl<B: Buffer, O: BufferOpener, C: BufferCreator<B>> Buffer for OverlappedBuffe
         result
     }
 
-    fn poll_buffer_after_done(&mut self) -> Option<Vec<Self::V>> {
+    fn poll_buffer_after_done(&mut self, cx: &mut Context) -> Option<Vec<Self::V>> {
         if let Some(mut front) = self.buffers.pop_front() {
             // If overlapped buffers still have buffer, return either the poll after done result
             // or empty vec, so we can continue to poll next buffer
-            if let Some(r) = front.poll_buffer_after_done() {
+            if let Some(r) = front.poll_buffer_after_done(cx) {
                 Some(r) 
             } else {
                 Some(Vec::new())
